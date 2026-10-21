@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Hunt</title>
+<style>
+:root{--bg:#cfd7e0;--g1:#9fbbdb;--g2:#b7d3dc;--card:#e4eaf1;--tx:#2b2e33;--mu:#59616c;--pn:#444649;--pnt:#f4f6f9;--hl:#ffd84d;--hlt:#2b2e33;--gr:#00b95c;--bd:#2b2e33;--bad:#c93d3d}
+@media (prefers-color-scheme:dark){:root{--bg:#2d3035;--g1:#3d5575;--g2:#35575f;--card:#3b3e43;--tx:#f2f4f7;--mu:#b0b8c4;--pn:#25272b;--bd:#b0b8c4}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--tx);font:16px/1.45 "Segoe UI",system-ui,Helvetica,Arial,sans-serif;background:radial-gradient(60% 50% at 85% 15%,var(--g1),transparent 70%),radial-gradient(50% 45% at 80% 85%,var(--g2),transparent 70%),var(--bg);background-attachment:fixed;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:920px;margin:0 auto;padding:18px 16px 40px;text-align:center}
+h1{font:800 clamp(38px,9vw,72px)/1 "Arial Black",Impact,sans-serif;letter-spacing:-.03em;margin:10px 0}
+h2{font-weight:300;font-size:clamp(20px,4vw,28px);margin:6px 0 14px}
+.tl{color:var(--gr);font-size:20px;margin:0 0 14px}
+.mu{color:var(--mu)}
+button,input,select{font:inherit}button{cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+.pill{border-radius:999px}
+.btn{background:var(--gr);color:#fff;border:0;padding:12px 40px;font-size:24px;font-weight:600}
+.btn.sm{font-size:15px;padding:8px 18px}
+.btn.ghost{background:transparent;color:var(--tx);border:1.5px solid var(--bd)}
+.inp{width:100%;max-width:520px;border:2px solid var(--bd);background:transparent;color:var(--tx);padding:18px 24px;font-size:22px;text-align:center}
+.tm{display:inline-block;background:var(--card);padding:6px 16px;font-weight:600;border:1px solid var(--bd)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;min-height:38px}
+.boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));border:2px solid var(--bd);border-radius:20px;overflow:hidden;margin-top:14px}
+.box{padding:34px 10px;border:1px solid var(--bd);background:var(--card)}
+.box b{display:block;font-size:24px}.box span{font-size:22px;font-weight:300}
+.box.win{background:var(--hl);color:var(--hlt)}
+.box.on span{color:var(--gr);font-weight:700}.box.win.on span{color:var(--hlt)}
+.panel{background:var(--pn);color:var(--pnt);border-radius:24px;padding:12px;display:inline-block;max-width:100%}
+#grid{display:grid;grid-template-columns:repeat(15,1fr);width:min(92vw,560px);touch-action:none;user-select:none;-webkit-user-select:none;gap:1px}
+.c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:clamp(11px,3.4vw,20px);border-radius:6px}
+.c.s{background:#7aa6ff;color:#14203a}.c.f{background:var(--hl);color:var(--hlt)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:14px;margin:14px auto 0;max-width:560px}
+.wl{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;margin-top:6px}
+.wl span{background:var(--hl);color:var(--hlt);padding:1px 10px;border-radius:8px;font-weight:700;font-size:14px}
+.note{font-size:13px;color:var(--mu);margin-top:12px}.err{color:var(--bad);font-weight:600}
+#qr img,#qr svg{width:170px;height:170px;background:#fff;padding:6px;border-radius:12px}
+</style></head><body><main id="app"><p>Loading…</p></main>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getDatabase,ref,onValue,set,update,get,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+/* ===== SETUP: paste your Firebase config here ===== */
+const FIREBASE_CONFIG= {
+  apiKey: "AIzaSyDC6ICU9wbZZD6JxwW7fUwhSl7OSjTrwFg",
+  authDomain: "wordhunt-79a26.firebaseapp.com",
+  databaseURL: "https://wordhunt-79a26-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "wordhunt-79a26",
+  storageBucket: "wordhunt-79a26.firebasestorage.app",
+  messagingSenderId: "225475319753",
+  appId: "1:225475319753:web:d26baaee1c1354374cba18",
+  measurementId: "G-M0L70VSVG5"
+};
+
+  // Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const HOST_PIN="1234";   /* change this. Host opens: your-site-url/#host */
+/* ================================================== */
+
+const WORDS=['ORGANIZING','ORGANIZATION','AUTHORITY','STRUCTURE','NETWORK','MATRIX','STORAGE','SECURITY','DISTRIBUTION','ACCURACY','COORDINATION','SPECIALIZATION','FUNCTIONAL','DIVISIONAL','INFORMATION'];
+const N=15,TOTAL=WORDS.length;
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R=rng(20261021),G=Array.from({length:N},()=>Array(N).fill('')),POS={};
+const D=[[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]],ORD=[2,0,3,1,6,4,7,5];
+[...WORDS].sort((a,b)=>b.length-a.length).forEach((w,wi)=>{for(let t=0;t<4000;t++){
+  const[dr,dc]=D[t<2500?ORD[wi%8]:Math.floor(R()*8)],r=Math.floor(R()*N),c=Math.floor(R()*N),er=r+dr*(w.length-1),ec=c+dc*(w.length-1);
+  if(er<0||er>=N||ec<0||ec>=N)continue;let ok=true;
+  for(let i=0;i<w.length;i++){const x=G[r+dr*i][c+dc*i];if(x&&x!==w[i]){ok=false;break}}
+  if(!ok)continue;POS[w]=[];
+  for(let i=0;i<w.length;i++){G[r+dr*i][c+dc*i]=w[i];POS[w].push([r+dr*i,c+dc*i])}break}});
+for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(!G[r][c])G[r][c]='ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(R()*26)];
+
+const app=document.getElementById('app'),$=s=>document.querySelector(s);
+const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}return null};
+if(FIREBASE_CONFIG.apiKey.startsWith('PASTE')){app.innerHTML='<h1>Word Hunt</h1><p class="err">Setup needed: paste your Firebase config at the top of index.html.</p>';throw new Error('no config')}
+const db=getDatabase(initializeApp(FIREBASE_CONFIG));
+let off=0,game={status:'lobby',epoch:0},groups={},me=+ls('wh_g')||null,mine=[],lastT=0,epoch=null,hostView=false,ph='',shownKey='',wipe=false,dur=300,err='';
+try{mine=JSON.parse(ls('wh_w')||'[]')}catch(e){mine=[]}
+lastT=+ls('wh_t')||0;epoch=ls('wh_e')==null?null:+ls('wh_e');
+const now=()=>Date.now()+off;
+const fmt=ms=>{ms=Math.max(0,Math.ceil(ms/1000));return Math.floor(ms/60)+':'+String(ms%60).padStart(2,'0')};
+const left=()=>game.status==='running'?game.startAt+game.dur-now():0;
+function phase(){if(game.status!=='running'||!game.startAt)return'lobby';if(left()<=0)return'ended';if(Object.values(groups).some(x=>x&&x.count>=TOTAL))return'ended';return'run'}
+function rank(){return Object.entries(groups).filter(([,v])=>v&&v.joined).map(([k,v])=>({g:+k.slice(1),n:v.count||0,t:v.lastAt||9e15})).sort((a,b)=>b.n-a.n||a.t-b.t)}
+function pub(){ls('wh_w',JSON.stringify(mine));ls('wh_t',String(lastT));if(me)update(ref(db,'groups/g'+me),{joined:true,count:mine.length,words:mine,lastAt:lastT}).catch(()=>{})}
+function chkEpoch(){const e=game.epoch||0;if(e===epoch)return;if(epoch!==null){mine=[];lastT=0;ls('wh_w',null)}epoch=e;ls('wh_e',String(e));if(me)pub()}
+
+onValue(ref(db,'.info/serverTimeOffset'),s=>{off=s.val()||0});
+onValue(ref(db,'game'),s=>{game=s.val()||{status:'lobby',epoch:0};if(!hostView)chkEpoch();sync()},()=>fail());
+onValue(ref(db,'groups'),s=>{groups=s.val()||{};sync()},()=>fail());
+function fail(){app.innerHTML='<h1>Word Hunt</h1><p class="err">Cannot reach the game server. Check internet and Firebase rules.</p>'}
+setInterval(sync,1000);
+
+/* host unlock */
+hostView=location.hash==='#host'&&ls('wh_hp')===HOST_PIN;
+function sync(){
+  const p=phase(),key=(location.hash==='#host'&&!hostView?'pin':hostView?'h':me?'g'+me:'j')+p;
+  if(key!==shownKey){shownKey=key;ph=p;render();return}
+  const t=$('#tm');if(t)t.textContent=p==='run'?fmt(left())+' mins left':(p==='ended'?'Time’s up':'Waiting for host');
+  if(hostView)hostBoxes();
+}
+function render(){
+  if(location.hash==='#host'&&!hostView)return renderPin();
+  if(hostView)return renderHost();
+  if(!me)return renderJoin();
+  renderPlay();
+}
+window.addEventListener('hashchange',()=>{hostView=location.hash==='#host'&&ls('wh_hp')===HOST_PIN;shownKey='';sync()});
+function renderPin(){
+  app.innerHTML=`<p class="tl">Host Perspective</p><h1>Word Hunt</h1><p><input class="inp pill" id="pn" type="password" placeholder="Host PIN" aria-label="Host PIN"></p><p><button class="btn pill" id="ok">Enter</button></p><p class="err" id="er"></p>`;
+  $('#ok').onclick=()=>{if($('#pn').value===HOST_PIN){ls('wh_hp',HOST_PIN);hostView=true;shownKey='';sync()}else $('#er').textContent='Wrong PIN.'};
+}
+function renderJoin(){
+  app.innerHTML=`<p class="tl">User Perspective</p><h1>Word Hunt</h1>
+  <p><input class="inp pill" id="gn" inputmode="numeric" maxlength="1" placeholder="Enter your Group Number" aria-label="Group number"></p>
+  <p><button class="btn pill" id="sv">Save</button></p><p class="err" id="er">${err}</p>
+  <p>The game will start once the Host starts.</p><p class="note">Group numbers 1 to 6.</p>`;
+  $('#sv').onclick=async()=>{const n=+$('#gn').value;if(!(n>=1&&n<=6)){$('#er').textContent='Enter a number from 1 to 6.';return}
+    if(ls('wh_g')!==String(n)){mine=[];lastT=0}
+    if(!mine.length){try{const s=await get(ref(db,'groups/g'+n)),d=s.val();if(d&&d.words&&epoch===(game.epoch||0)){mine=d.words;lastT=d.lastAt||0}}catch(e){}}
+    me=n;err='';ls('wh_g',String(n));epoch=game.epoch||0;ls('wh_e',String(epoch));pub();shownKey='';sync()};
+}
+function renderPlay(){
+  const head=`<div class="top"><button class="btn ghost sm pill" id="ch">Change group</button><span class="tm pill" id="tm"></span><span></span></div><h2>Group ${me}</h2>`;
+  const bindCh=()=>{$('#ch').onclick=()=>{me=null;ls('wh_g',null);shownKey='';sync()}};
+  if(ph==='lobby'){app.innerHTML=head+`<h1>Get ready</h1><p>You joined Group ${me}.</p><p>The game will start once the Host starts.</p>`;bindCh();return}
+  if(ph==='ended'){const r=rank(),pos=r.findIndex(x=>x.g===me)+1;
+    app.innerHTML=head+`<h1>Game over</h1><div class="card"><p><b style="font-size:28px">${mine.length}</b> of ${TOTAL} words found</p><p class="mu">Your rank: ${pos||'-'} of ${r.length}</p><div class="wl">${mine.map(w=>`<span>${w[0]+w.slice(1).toLowerCase()}</span>`).join('')}</div></div>`;bindCh();return}
+  app.innerHTML=head+`<div class="panel"><div id="grid">${G.map((row,r)=>row.map((l,c)=>`<div class="c" data-r="${r}" data-c="${c}">${l}</div>`).join('')).join('')}</div></div>
+  <div class="card"><div>Words Found: <b id="wf">${mine.length}</b> / ${TOTAL}</div><div class="wl" id="wl"></div></div><p class="note">Drag across letters in any direction.</p>`;
+  bindCh();mine.forEach(markWord);listWords();gridEvents();
+}
+function listWords(){const l=$('#wl');if(l)l.innerHTML=mine.map(w=>`<span>${w[0]+w.slice(1).toLowerCase()}</span>`).join('');const f=$('#wf');if(f)f.textContent=mine.length}
+const cell=(r,c)=>document.querySelector(`.c[data-r="${r}"][data-c="${c}"]`);
+function markWord(w){(POS[w]||[]).forEach(([r,c])=>{const e=cell(r,c);if(e)e.classList.add('f')})}
+function gridEvents(){
+  const gr=$('#grid');let a=null,path=[];
+  const at=e=>{const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.closest?el.closest('.c'):null};
+  const clr=()=>document.querySelectorAll('.c.s').forEach(x=>x.classList.remove('s'));
+  const draw=()=>{clr();path.forEach(([r,c])=>cell(r,c).classList.add('s'))};
+  gr.onpointerdown=e=>{const el=at(e);if(!el)return;a=[+el.dataset.r,+el.dataset.c];path=[a];try{gr.setPointerCapture(e.pointerId)}catch(x){}draw()};
+  gr.onpointermove=e=>{if(!a)return;const el=at(e);if(!el)return;const r=+el.dataset.r,c=+el.dataset.c,dr=r-a[0],dc=c-a[1];
+    if(!(dr===0||dc===0||Math.abs(dr)===Math.abs(dc)))return;
+    const n=Math.max(Math.abs(dr),Math.abs(dc)),sr=Math.sign(dr),sc=Math.sign(dc);path=[];
+    for(let i=0;i<=n;i++)path.push([a[0]+sr*i,a[1]+sc*i]);draw()};
+  const end=()=>{if(!a)return;const s=path.map(([r,c])=>G[r][c]).join(''),rv=[...s].reverse().join('');
+    const w=WORDS.find(x=>x===s||x===rv);a=null;
+    if(w&&!mine.includes(w)&&phase()==='run'){mine.push(w);path.forEach(([r,c])=>cell(r,c).classList.add('f'));markWord(w);listWords();lastT=now();pub()}
+    clr();path=[]};
+  gr.onpointerup=end;gr.onpointercancel=end;
+}
+function renderHost(){
+  const ended=ph==='ended';
+  app.innerHTML=`<div class="top"><span class="tm pill" id="tm"></span><span></span></div><p class="tl">Host Perspective</p><h1>Word Hunt</h1>
+  ${ph==='lobby'?`<div id="qr"></div><p class="mu">Scan to join</p><p><label>Time: <select id="du" class="inp pill" style="width:auto;padding:8px 14px;font-size:16px">${[3,5,10].map(m=>`<option value="${m*60}" ${m*60===dur?'selected':''}>${m} min</option>`).join('')}</select></label></p><p><button class="btn pill" id="st">Start</button></p>`:''}
+  ${ended?'<h2 id="wn"></h2>':''}
+  <div class="boxes" id="bx"></div>
+  <p style="margin-top:16px"><button class="btn ghost sm pill" id="rs">${wipe?'Tap again to reset everything':'Reset game'}</button></p>
+  <p class="note">Players scan the QR and enter their group number. First to ${TOTAL} words ends the game. Ties go to who found their last word first.</p>`;
+  hostBoxes();
+  const q=$('#qr');if(q&&window.qrcode){try{const c=qrcode(0,'M');c.addData(location.href.split('#')[0]);c.make();q.innerHTML=c.createSvgTag(6,0)}catch(e){}}
+  const st=$('#st');if(st){$('#du').onchange=e=>dur=+e.target.value;
+    st.onclick=()=>set(ref(db,'game'),{status:'running',startAt:serverTimestamp(),dur:dur*1000,epoch:game.epoch||0}).catch(()=>{})}
+  $('#rs').onclick=async()=>{if(!wipe){wipe=true;shownKey='';sync();return}wipe=false;
+    const e=(game.epoch||0)+1,o={};for(let i=1;i<=6;i++)o['g'+i]={joined:false,count:0,words:[],lastAt:0};
+    try{await set(ref(db,'groups'),o);await set(ref(db,'game'),{status:'lobby',epoch:e})}catch(x){}shownKey='';sync()};
+}
+function hostBoxes(){
+  const b=$('#bx');if(!b)return;const r=rank(),top=ph==='ended'&&r.length?r[0].g:0;
+  b.innerHTML=[1,2,3,4,5,6].map(i=>{const g=groups['g'+i],j=g&&g.joined;
+    return`<div class="box ${j?'on':''} ${top===i?'win':''}"><b>Group ${i}</b><span>${ph==='lobby'?(j?'Joined':'Waiting'):(j?'Words Found: '+(g.count||0):'Not joined')}</span></div>`}).join('');
+  const w=$('#wn');if(w&&top)w.textContent='Winner: Group '+top+' with '+r[0].n+' words';
+}
+sync();
+</script></body></html>
